@@ -1,0 +1,109 @@
+:root {
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --text: #1c2333;
+  --muted: #566078;
+  --primary: #2349c7;
+  --primary-dark: #1a3699;
+  --border: #d5dbe8;
+  --error: #b3261e;
+  --success-bg: #e7f6ec;
+  --success-border: #2e7d4f;
+}
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.site-header {
+  background: var(--primary);
+  color: #fff;
+  padding: 1.5rem 1rem;
+  text-align: center;
+}
+.site-header h1 { margin: 0 0 0.25rem; font-size: 1.75rem; }
+.tagline { margin: 0; opacity: 0.9; }
+
+main { max-width: 760px; margin: 0 auto; padding: 1rem; }
+
+h2 { font-size: 1.2rem; margin: 1.25rem 0 0.75rem; }
+
+.event-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.75rem;
+}
+.event-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem;
+}
+.event-card h3 { margin: 0 0 0.25rem; font-size: 1.05rem; }
+.event-card p { margin: 0.15rem 0; color: var(--muted); }
+.event-card .price { color: var(--text); font-weight: 600; }
+.event-card .sold-out { color: var(--error); font-weight: 600; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 1.25rem 1.25rem;
+  margin-top: 1rem;
+}
+.panel-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+
+.field { margin-bottom: 0.9rem; display: flex; flex-direction: column; }
+.field label { font-weight: 600; margin-bottom: 0.25rem; }
+.field.checkbox { flex-direction: row; align-items: center; gap: 0.5rem; }
+.field.checkbox label { margin: 0; font-weight: 500; }
+
+input[type="text"], input[type="email"], select {
+  font: inherit;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+}
+input:focus-visible, select:focus-visible, button:focus-visible {
+  outline: 3px solid #9db4ff;
+  outline-offset: 1px;
+}
+input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--error); }
+
+.price-line { font-size: 1.1rem; margin: 0.5rem 0 1rem; }
+
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border: 0;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+}
+button:hover { background: var(--primary-dark); }
+button.secondary { background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 0.35rem 0.8rem; }
+button.secondary:hover { background: #eef2ff; }
+
+.error { color: var(--error); margin: 0.3rem 0 0; font-size: 0.95rem; }
+.status { color: var(--muted); margin: 0.5rem 0 0; min-height: 1.5em; }
+
+.confirmation { background: var(--success-bg); border-color: var(--success-border); }
+.confirmation dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0; }
+.confirmation dt { font-weight: 600; }
+.confirmation dd { margin: 0; overflow-wrap: anywhere; }
+
+#bookings-list { padding-left: 1.2rem; margin: 0.5rem 0 0; }
+#bookings-list li { margin-bottom: 0.35rem; overflow-wrap: anywhere; }
+
+.site-footer { max-width: 760px; margin: 1rem auto 2rem; padding: 0 1rem; color: var(--muted); font-size: 0.9rem; }

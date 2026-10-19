@@ -1,0 +1,4 @@
+# Keep line endings the same for everyone (Windows, Ubuntu, macOS).
+* text=auto eol=lf
+*.png binary
+*.jpg binary

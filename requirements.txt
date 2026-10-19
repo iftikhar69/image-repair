@@ -1,0 +1,6 @@
+# Pinned to the exact versions this project was verified with.
+# Python 3.10 or newer is required (pytest 9 and pytest-playwright 0.10 need it).
+# Python 3.12 is the recommended version for this class.
+pytest==9.1.1
+pytest-playwright==0.10.0
+playwright==1.56.0

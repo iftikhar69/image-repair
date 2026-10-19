@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campus Event Booking</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <h1 id="app-title" data-testid="app-title">Campus Event Booking</h1>
+    <p class="tagline">Reserve a seat at upcoming campus events. Classroom demo: no real payments.</p>
+  </header>
+
+  <main>
+    <section aria-labelledby="events-heading">
+      <h2 id="events-heading">Upcoming events</h2>
+      <div id="event-list" data-testid="event-list" class="event-grid"></div>
+    </section>
+
+    <section aria-labelledby="booking-heading" class="panel">
+      <h2 id="booking-heading">Book a seat</h2>
+
+      <form id="booking-form" data-testid="booking-form" novalidate>
+        <div class="field">
+          <label for="name">Full name</label>
+          <input id="name" data-testid="name-input" name="name" type="text" autocomplete="name">
+          <p id="name-error" data-testid="name-error" class="error" role="alert" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="email">Email address</label>
+          <input id="email" data-testid="email-input" name="email" type="email" autocomplete="email">
+          <p id="email-error" data-testid="email-error" class="error" role="alert" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="event">Event</label>
+          <select id="event" data-testid="event-select" name="event">
+            <option value="">Select an event</option>
+          </select>
+          <p id="event-error" data-testid="event-error" class="error" role="alert" hidden></p>
+        </div>
+
+        <div class="field checkbox">
+          <input id="student" data-testid="student-checkbox" name="student" type="checkbox">
+          <label for="student">I am a student (20% discount)</label>
+        </div>
+
+        <p class="price-line">Price: <strong id="price-display" data-testid="price-display">—</strong></p>
+
+        <button id="submit-button" data-testid="submit-button" type="submit">Book my seat</button>
+        <p id="form-status" data-testid="form-status" class="status" role="status"></p>
+        <p id="form-error" data-testid="form-error" class="error" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <section id="confirmation" data-testid="confirmation" class="panel confirmation" aria-live="polite" hidden>
+      <h2 data-testid="confirmation-title">Booking confirmed!</h2>
+      <dl>
+        <dt>Name</dt>   <dd data-testid="confirmation-name"></dd>
+        <dt>Event</dt>  <dd data-testid="confirmation-event"></dd>
+        <dt>Email</dt>  <dd data-testid="confirmation-email"></dd>
+        <dt>Amount</dt> <dd data-testid="confirmation-amount"></dd>
+      </dl>
+    </section>
+
+    <section aria-labelledby="bookings-heading" class="panel">
+      <div class="panel-header">
+        <h2 id="bookings-heading">My bookings</h2>
+        <button id="reset-button" data-testid="reset-button" type="button" class="secondary">Reset demo data</button>
+      </div>
+      <p id="bookings-empty" data-testid="bookings-empty">No bookings yet.</p>
+      <ul id="bookings-list" data-testid="bookings-list"></ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Bookings are kept in this browser's <code>localStorage</code> (key <code>svv.campus-events.bookings.v1</code>). There is no server or database.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
