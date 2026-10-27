@@ -1,8 +1,6 @@
-# Batch image repair. Python 3.8 or newer.
-# opencv-python-headless ships the same cv2 API as opencv-python, without
-# a GUI or a libGL dependency, which is what this command-line tool needs.
-# If you already install opencv-python, that package works in its place.
+# Same packages as requirements.txt. Python 3.10 or newer.
 pillow>=10.4.0
 opencv-python-headless>=4.10.0
 flask>=3.0.3
 gunicorn>=22.0.0
+pytest>=8.0.0

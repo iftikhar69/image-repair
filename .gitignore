@@ -4,10 +4,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
-# Playwright / pytest output
-test-results/
-playwright-report/
-
 # Editors and operating systems
 .vscode/
 .idea/

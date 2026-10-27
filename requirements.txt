@@ -1,12 +1,6 @@
-# Pinned to the exact versions this project was verified with.
-# Python 3.10 or newer is required (pytest 9 and pytest-playwright 0.10 need it).
-# Python 3.12 is the recommended version for this class.
-pytest==9.1.1
-pytest-playwright==0.10.0
-playwright==1.56.0
-
-# Image repair service. Render installs this file and starts Procfile.
+# Python 3.10 or newer. Image repair web app and command-line batch tool.
 pillow>=10.4.0
 opencv-python-headless>=4.10.0
 flask>=3.0.3
 gunicorn>=22.0.0
+pytest>=8.0.0
