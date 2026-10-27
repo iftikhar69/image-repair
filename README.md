@@ -428,3 +428,4 @@ python -m pytest repair_tests
 ```
 
 Put damaged files in `corrupted_images/`. Repaired files land in `repaired_images/`. Files neither decoder could open are copied to `unrepairable_images/`. A bad file does not stop the rest of the batch.
+# image-repair
