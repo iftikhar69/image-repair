@@ -42,6 +42,29 @@ python batch_repair.py --reference camera_sample.jpg
 
 `--reference` must be a JPEG that still opens, from the same camera and the same pixel size. It is used only when a file's header will not parse.
 
+## Sample images
+
+You do not need your own damaged photos to try the tool. After you clone, the files are in `samples/`:
+
+| File | What is wrong |
+| --- | --- |
+| `samples/truncated.jpg` | The scan ends early |
+| `samples/dirty-container.jpg` | Extra bytes before and after the JPEG |
+| `samples/broken-header.jpg` | The header was removed |
+| `samples/reference.jpg` | A clean JPEG of the same scene, used to rebuild that header |
+| `samples/mark.png` | A normal PNG |
+| `samples/plate.bmp` | A normal bitmap |
+| `samples/unreadable.jpg` | Text with a JPEG name. Repair should fail |
+
+On the web page, choose **Repair sample images**. From the command line:
+
+```bash
+mkdir -p repaired_images unrepairable_images
+python batch_repair.py --input samples --output repaired_images --failed unrepairable_images --reference samples/reference.jpg
+```
+
+Regenerate the files with `python scripts/make_samples.py`.
+
 ## Tests
 
 ```bash

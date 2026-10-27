@@ -2,6 +2,7 @@
 
 import io
 import random
+import re
 
 from PIL import Image
 
@@ -29,6 +30,8 @@ def test_home_and_health(tmp_path):
     assert home.status_code == 200
     assert b"Image repair" in home.data
     assert b"Repair images" in home.data
+    assert b"Repair sample images" in home.data
+    assert b"truncated.jpg" in home.data
     health = client.get("/health")
     assert health.status_code == 200
     assert health.get_json()["status"] == "ok"
@@ -48,9 +51,10 @@ def test_repair_upload_returns_a_download(tmp_path):
     page = response.get_data(as_text=True)
     assert "shot.jpg" in page
     assert "Repaired" in page
-    assert "via pillow" in page
-    start = page.find('href="')
-    href = page[start + 6 : page.find('"', start + 6)]
+    assert "Pillow" in page
+    match = re.search(r'class="result-download" href="([^"]+)"', page)
+    assert match is not None
+    href = match.group(1)
     downloaded = client.get(href)
     assert downloaded.status_code == 200
     assert downloaded.data.startswith(b"\xff\xd8")
@@ -72,6 +76,23 @@ def test_empty_and_unsupported_uploads_are_rejected(tmp_path):
     )
     assert bad.status_code == 400
     assert b"not a JPEG, PNG, or BMP" in bad.data
+
+
+def test_sample_set_repairs_and_keeps_the_unreadable_file(tmp_path):
+    client = _client(tmp_path)
+    response = client.post("/samples/repair")
+    assert response.status_code == 200
+    page = response.get_data(as_text=True)
+    assert "truncated.jpg" in page
+    assert "broken-header.jpg" in page
+    assert "Pillow, after header transplant" in page
+    assert "unreadable.jpg" in page
+    assert "Unreadable" in page
+    sample = client.get("/samples/reference.jpg")
+    assert sample.status_code == 200
+    assert sample.data.startswith(b"\xff\xd8")
+    missing = client.get("/samples/not-a-sample.jpg")
+    assert missing.status_code == 404
 
 
 def test_download_rejects_path_escape(tmp_path):

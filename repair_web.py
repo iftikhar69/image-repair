@@ -28,6 +28,68 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024
 app.config["JOB_ROOT"] = str(Path(tempfile.gettempdir()) / "image-repair-jobs")
 
+SAMPLE_DIR = Path(__file__).resolve().parent / "samples"
+SAMPLE_CATALOG = (
+    {
+        "filename": "truncated.jpg",
+        "title": "Truncated JPEG",
+        "detail": "The scan stops early. The top of the scene should still come back.",
+        "damaged": True,
+        "preview": False,
+    },
+    {
+        "filename": "dirty-container.jpg",
+        "title": "Junk around a JPEG",
+        "detail": "Extra bytes sit before the start marker and after the end marker.",
+        "damaged": True,
+        "preview": False,
+    },
+    {
+        "filename": "broken-header.jpg",
+        "title": "Header removed",
+        "detail": "The header is gone. The sample run uses reference.jpg to rebuild it.",
+        "damaged": True,
+        "preview": False,
+    },
+    {
+        "filename": "mark.png",
+        "title": "PNG",
+        "detail": "A normal PNG, so you can confirm a file that is not a JPEG.",
+        "damaged": True,
+        "preview": True,
+    },
+    {
+        "filename": "plate.bmp",
+        "title": "BMP",
+        "detail": "A normal bitmap of the same scene.",
+        "damaged": True,
+        "preview": False,
+    },
+    {
+        "filename": "unreadable.jpg",
+        "title": "Not an image",
+        "detail": "The name looks like a JPEG. The bytes are plain text, so this one fails.",
+        "damaged": True,
+        "preview": False,
+    },
+    {
+        "filename": "reference.jpg",
+        "title": "Reference JPEG",
+        "detail": "A clean file of the same scene. The sample run uses it only for the broken header.",
+        "damaged": False,
+        "preview": True,
+    },
+)
+_SAMPLE_NAMES = {item["filename"] for item in SAMPLE_CATALOG}
+_METHOD_LABELS = {
+    "pillow": "Pillow",
+    "opencv": "OpenCV",
+    "pillow-markers": "Pillow, after marker cleanup",
+    "opencv-markers": "OpenCV, after marker cleanup",
+    "pillow-header": "Pillow, after header transplant",
+    "opencv-header": "OpenCV, after header transplant",
+}
+
 _JOB_ID = re.compile(r"[0-9a-f]{32}")
 _STORED_NAME = re.compile(r"[A-Za-z0-9._-]{1,180}")
 _BUCKETS = {"repaired", "failed"}
@@ -65,7 +127,15 @@ def _unique_name(original: str, used: set[str], fallback_stem: str) -> str:
 
 
 def _page(error: str | None = None, job: dict | None = None, status: int = 200):
-    return render_template("index.html", error=error, job=job), status
+    return (
+        render_template(
+            "index.html",
+            error=error,
+            job=job,
+            samples=SAMPLE_CATALOG,
+        ),
+        status,
+    )
 
 
 @app.get("/")
@@ -76,6 +146,45 @@ def index():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/samples/<filename>")
+def sample_file(filename: str):
+    if filename not in _SAMPLE_NAMES:
+        abort(404)
+    path = (SAMPLE_DIR / filename).resolve()
+    if SAMPLE_DIR.resolve() not in path.parents or not path.is_file():
+        abort(404)
+    return send_file(path, as_attachment=False, download_name=filename)
+
+
+@app.post("/samples/repair")
+def repair_samples():
+    missing = [
+        item["filename"]
+        for item in SAMPLE_CATALOG
+        if not (SAMPLE_DIR / item["filename"]).is_file()
+    ]
+    if missing:
+        return _page(
+            "The sample files are missing from the samples folder.",
+            status=500,
+        )
+    root = _job_root()
+    _purge_old_jobs(root)
+    job_id = uuid.uuid4().hex
+    job_dir = root / job_id
+    incoming = job_dir / "incoming"
+    incoming.mkdir(parents=True)
+    for item in SAMPLE_CATALOG:
+        if item["damaged"]:
+            shutil.copyfile(SAMPLE_DIR / item["filename"], incoming / item["filename"])
+    return _finish_job(
+        job_id,
+        job_dir,
+        reference_path=str(SAMPLE_DIR / "reference.jpg"),
+        quality=95,
+    )
 
 
 @app.post("/repair")
@@ -101,8 +210,6 @@ def repair():
     job_id = uuid.uuid4().hex
     job_dir = root / job_id
     incoming = job_dir / "incoming"
-    repaired = job_dir / "repaired"
-    failed = job_dir / "failed"
     incoming.mkdir(parents=True)
     used: set[str] = set()
     saved = 0
@@ -139,10 +246,14 @@ def repair():
         shutil.rmtree(job_dir, ignore_errors=True)
         return _page("Choose at least one JPEG, PNG, or BMP file.", status=400)
 
+    return _finish_job(job_id, job_dir, reference_path, quality)
+
+
+def _finish_job(job_id: str, job_dir: Path, reference_path: str | None, quality: int):
     summary = process_batch(
-        str(incoming),
-        str(repaired),
-        str(failed),
+        str(job_dir / "incoming"),
+        str(job_dir / "repaired"),
+        str(job_dir / "failed"),
         reference_path=reference_path,
         workers=1,
         quality=quality,
@@ -170,6 +281,7 @@ def _job_view(job_id: str, summary) -> dict:
                 "filename": item.filename,
                 "status": item.status,
                 "method": item.method,
+                "method_label": _METHOD_LABELS.get(item.method, item.method),
                 "bucket": bucket,
                 "job_id": job_id,
             }
@@ -184,8 +296,7 @@ def _job_view(job_id: str, summary) -> dict:
     }
 
 
-@app.get("/jobs/<job_id>/<bucket>/<filename>")
-def download(job_id: str, bucket: str, filename: str):
+def _job_file(job_id: str, bucket: str, filename: str) -> Path:
     if not _JOB_ID.fullmatch(job_id) or bucket not in _BUCKETS:
         abort(404)
     if not _STORED_NAME.fullmatch(filename):
@@ -194,7 +305,21 @@ def download(job_id: str, bucket: str, filename: str):
     path = (folder / filename).resolve()
     if folder not in path.parents or not path.is_file():
         abort(404)
-    return send_file(path, as_attachment=True, download_name=filename)
+    return path
+
+
+@app.get("/jobs/<job_id>/<bucket>/<filename>/preview")
+def preview(job_id: str, bucket: str, filename: str):
+    return send_file(_job_file(job_id, bucket, filename), as_attachment=False)
+
+
+@app.get("/jobs/<job_id>/<bucket>/<filename>")
+def download(job_id: str, bucket: str, filename: str):
+    return send_file(
+        _job_file(job_id, bucket, filename),
+        as_attachment=True,
+        download_name=filename,
+    )
 
 
 @app.errorhandler(RequestEntityTooLarge)

@@ -6,173 +6,335 @@
   <title>Image repair</title>
   <style>
     :root {
-      --ink: #1d1a16;
-      --muted: #5e564c;
-      --line: #e4d9c8;
-      --paper: #f7f1e7;
-      --card: #fffaf3;
-      --copper: #b4532a;
-      --copper-dark: #8c3d1c;
-      --ok: #1d6b45;
-      --ok-bg: #e5f4eb;
-      --bad: #8d2d2d;
-      --bad-bg: #f8e8e4;
-      --warn-bg: #fff1e4;
+      --ink: #0f172a;
+      --muted: #526074;
+      --line: #e2e8f0;
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --accent: #0f766e;
+      --accent-dark: #115e59;
+      --ok: #166534;
+      --ok-bg: #dcfce7;
+      --bad: #991b1b;
+      --bad-bg: #fee2e2;
+      --warn-bg: #fff7ed;
+      --warn-line: #fdba74;
+      --shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       color: var(--ink);
-      background:
-        radial-gradient(circle at top left, #f3e2cf 0, transparent 36%),
-        var(--paper);
+      background: var(--bg);
       font: 16px/1.5 "Segoe UI", "Helvetica Neue", sans-serif;
     }
-    main {
-      width: min(42rem, calc(100% - 2rem));
-      margin: 0 auto;
-      padding: 2.5rem 0 3rem;
+    a { color: var(--accent-dark); }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.9rem 1.25rem;
+      background: #0f172a;
+      color: #f8fafc;
     }
-    header h1 {
-      margin: 0;
-      font-family: Georgia, "Iowan Old Style", serif;
-      font-size: clamp(2.2rem, 5vw, 3.2rem);
-      font-weight: 600;
+    .brand {
+      color: inherit;
+      text-decoration: none;
+      font-weight: 700;
       letter-spacing: -0.03em;
-      line-height: 1.05;
     }
-    header p {
-      margin: 0.75rem 0 0;
-      max-width: 38rem;
-      color: var(--muted);
+    .brand-meta { color: #94a3b8; font-size: 0.85rem; }
+    main {
+      width: min(68rem, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 2rem 0 3rem;
     }
-    form, .results, .error {
-      margin-top: 1.5rem;
-      padding: 1.25rem;
+    .intro h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 3vw, 2.4rem);
+      letter-spacing: -0.04em;
+      line-height: 1.15;
+    }
+    .intro p { margin: 0.6rem 0 0; max-width: 42rem; color: var(--muted); }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin: 1.25rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .steps li {
+      padding: 0.8rem 0.9rem;
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 18px;
+      border-radius: 12px;
     }
-    label {
-      display: block;
-      margin-bottom: 0.35rem;
-      font-size: 0.92rem;
-      font-weight: 650;
+    .steps strong { display: block; font-size: 0.92rem; }
+    .steps span { color: var(--muted); font-size: 0.85rem; }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(18rem, 0.9fr);
+      gap: 1rem;
+      margin-top: 1.25rem;
+      align-items: start;
     }
-    .field { margin-bottom: 1rem; }
-    .hint { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.88rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 1.15rem;
+    }
+    .card h2 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+    .lede { margin: 0 0 1rem; color: var(--muted); font-size: 0.92rem; }
+    .drop {
+      position: relative;
+      display: grid;
+      gap: 0.2rem;
+      padding: 1.25rem;
+      border: 1.5px dashed #99b4c4;
+      border-radius: 14px;
+      background: #f8fbfc;
+      cursor: pointer;
+    }
+    .drop strong { font-size: 1rem; }
+    .drop span { color: var(--muted); font-size: 0.9rem; }
+    .drop input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+    .field { margin-top: 0.9rem; }
+    label.plain { display: block; margin-bottom: 0.3rem; font-size: 0.9rem; font-weight: 650; }
     input[type="file"], input[type="number"] {
       width: 100%;
-      padding: 0.7rem 0.75rem;
+      padding: 0.65rem 0.7rem;
       border: 1px solid var(--line);
       border-radius: 10px;
       background: #fff;
-      color: var(--ink);
       font: inherit;
     }
-    input[type="number"] { max-width: 8rem; }
-    button {
+    input[type="number"] { max-width: 7.5rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1rem; }
+    button, .button {
       appearance: none;
       border: 0;
       border-radius: 999px;
-      padding: 0.75rem 1.2rem;
-      background: var(--copper);
+      padding: 0.7rem 1.05rem;
+      background: var(--accent);
       color: white;
       font: inherit;
       font-weight: 650;
       cursor: pointer;
+      text-decoration: none;
     }
-    button:hover { background: var(--copper-dark); }
+    button.secondary, .button.secondary {
+      background: #e2e8f0;
+      color: var(--ink);
+    }
+    button:hover, .button:hover { background: var(--accent-dark); }
+    button.secondary:hover { background: #cbd5e1; }
     .error {
+      margin-top: 1rem;
+      padding: 0.85rem 1rem;
       background: var(--warn-bg);
-      border-color: #efd0b4;
+      border: 1px solid var(--warn-line);
+      border-radius: 12px;
     }
-    .summary {
+    .sample-list { display: grid; gap: 0.65rem; margin: 0; padding: 0; list-style: none; }
+    .sample {
+      display: grid;
+      grid-template-columns: 4.5rem 1fr;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .thumb, .preview {
+      width: 4.5rem;
+      height: 3.2rem;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #e8eef5;
+      border: 1px solid var(--line);
+    }
+    .swatch {
+      display: grid;
+      place-items: center;
+      width: 4.5rem;
+      height: 3.2rem;
+      border-radius: 8px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .sample h3 { margin: 0; font-size: 0.95rem; }
+    .sample p { margin: 0.15rem 0 0; color: var(--muted); font-size: 0.84rem; }
+    .results { margin-top: 1.25rem; }
+    .stats { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0 0 1rem; }
+    .stat {
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #1e293b;
+      font-size: 0.88rem;
+      font-weight: 650;
+    }
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+      gap: 0.75rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .result {
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem 1rem;
-      margin: 0 0 1rem;
+      flex-direction: column;
+      gap: 0.55rem;
+      padding: 0.75rem;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+    }
+    .result img, .result .blank {
+      width: 100%;
+      height: 8.5rem;
+      object-fit: cover;
+      border-radius: 10px;
+      background: #e8eef5;
+    }
+    .blank {
+      display: grid;
+      place-items: center;
       color: var(--muted);
+      font-size: 0.85rem;
     }
-    ul { list-style: none; margin: 0; padding: 0; }
-    li {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      gap: 0.4rem 1rem;
-      padding: 0.85rem 0;
-      border-top: 1px solid var(--line);
-    }
-    li:first-child { border-top: 0; padding-top: 0; }
-    .name { font-weight: 650; overflow-wrap: anywhere; }
-    .meta { color: var(--muted); font-size: 0.9rem; }
+    .name { font-weight: 700; overflow-wrap: anywhere; }
     .pill {
       display: inline-block;
-      margin-right: 0.4rem;
-      padding: 0.1rem 0.45rem;
+      margin-right: 0.35rem;
+      padding: 0.08rem 0.45rem;
       border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 700;
+      font-size: 0.72rem;
+      font-weight: 750;
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
     .ok { color: var(--ok); background: var(--ok-bg); }
     .bad { color: var(--bad); background: var(--bad-bg); }
-    a { color: var(--copper-dark); }
+    .meta { color: var(--muted); font-size: 0.86rem; }
+    @media (max-width: 800px) {
+      .layout, .steps { grid-template-columns: 1fr; }
+      .brand-meta { display: none; }
+    }
   </style>
 </head>
 <body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('index') }}">Image repair</a>
+    <span class="brand-meta">JPEG, PNG, and BMP</span>
+  </header>
   <main>
-    <header>
-      <h1>Image repair</h1>
-      <p>Upload JPEG, PNG, or BMP files that show broken color, missing scanlines, or a damaged header. Pillow rebuilds each file first. OpenCV tries next. A bad file does not stop the rest.</p>
-    </header>
+    <section class="intro">
+      <h1>Repair a damaged photograph without a photo lab.</h1>
+      <p>Pillow rebuilds a truncated scan first. OpenCV is the fallback. A JPEG that still will not open can take its header from a reference shot on the same camera, at the same size. One bad file does not stop the rest.</p>
+      <ol class="steps">
+        <li><strong>1. Choose files</strong><span>Use your own images, or the sample set on this page.</span></li>
+        <li><strong>2. Repair</strong><span>Each file is decoded and written out as a clean image.</span></li>
+        <li><strong>3. Download</strong><span>Save the repaired file, or the original if it could not be opened.</span></li>
+      </ol>
+    </section>
 
     {% if error %}
     <p class="error" role="alert">{{ error }}</p>
     {% endif %}
 
-    <form action="{{ url_for('repair') }}" method="post" enctype="multipart/form-data">
-      <div class="field">
-        <label for="images">Damaged images</label>
-        <input id="images" name="images" type="file" accept=".jpg,.jpeg,.png,.bmp,image/jpeg,image/png,image/bmp" multiple required>
-        <p class="hint">Up to 32 MB for the whole upload. JPEG, PNG, and BMP only.</p>
-      </div>
-      <div class="field">
-        <label for="reference">Reference JPEG, optional</label>
-        <input id="reference" name="reference" type="file" accept=".jpg,.jpeg,image/jpeg">
-        <p class="hint">A photo from the same camera and the same pixel size. Its header is used only when a file will not open at all.</p>
-      </div>
-      <div class="field">
-        <label for="quality">JPEG quality</label>
-        <input id="quality" name="quality" type="number" min="1" max="100" value="95">
-      </div>
-      <button type="submit">Repair images</button>
-    </form>
+    <div class="layout">
+      <section class="card">
+        <h2>Your images</h2>
+        <p class="lede">Up to 32 MB for the whole upload.</p>
+        <form id="upload-form" action="{{ url_for('repair') }}" method="post" enctype="multipart/form-data">
+          <label class="drop" for="images">
+            <strong>Drop damaged images here</strong>
+            <span>or click to choose JPEG, PNG, or BMP files.</span>
+            <input id="images" name="images" type="file" accept=".jpg,.jpeg,.png,.bmp,image/jpeg,image/png,image/bmp" multiple required>
+          </label>
+          <p id="chosen" class="lede">No files selected yet.</p>
+          <div class="field">
+            <label class="plain" for="reference">Reference JPEG, optional</label>
+            <input id="reference" name="reference" type="file" accept=".jpg,.jpeg,image/jpeg">
+            <p class="lede">Only needed when a JPEG header will not parse. It must be the same pixel size as the damaged file.</p>
+          </div>
+          <div class="field">
+            <label class="plain" for="quality">JPEG quality</label>
+            <input id="quality" name="quality" type="number" min="1" max="100" value="95">
+          </div>
+          <div class="actions">
+            <button type="submit">Repair images</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" id="samples">
+        <h2>No damaged files yet?</h2>
+        <p class="lede">These files ship in the <code>samples/</code> folder. The button repairs all of them and uses <code>reference.jpg</code> for the broken header.</p>
+        <ul class="sample-list">
+          {% for sample in samples %}
+          <li class="sample">
+            {% if sample.preview %}
+            <img class="thumb" src="{{ url_for('sample_file', filename=sample.filename) }}" alt="">
+            {% else %}
+            <div class="swatch" aria-hidden="true">Test</div>
+            {% endif %}
+            <div>
+              <h3>{{ sample.title }}</h3>
+              <p>{{ sample.detail }}</p>
+              <a download href="{{ url_for('sample_file', filename=sample.filename) }}">{{ sample.filename }}</a>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        <form action="{{ url_for('repair_samples') }}" method="post">
+          <div class="actions">
+            <button type="submit">Repair sample images</button>
+          </div>
+        </form>
+      </section>
+    </div>
 
     {% if job %}
-    <section class="results" aria-live="polite">
-      <p class="summary">
-        <span>{{ job.success }} repaired</span>
-        <span>{{ job.failed }} unreadable</span>
-        <span>{{ job.elapsed }} s</span>
+    <section class="card results" aria-live="polite">
+      <h2>Results</h2>
+      <p class="stats">
+        <span class="stat">{{ job.success }} repaired</span>
+        <span class="stat">{{ job.failed }} unreadable</span>
+        <span class="stat">{{ job.elapsed }} s</span>
       </p>
       {% if job.rows %}
-      <ul>
+      <ul class="result-grid">
         {% for row in job.rows %}
-        <li>
-          <div>
-            <div class="name">{{ row.filename }}</div>
-            <div class="meta">
-              {% if row.status == "repaired" %}
-              <span class="pill ok">Repaired</span> via {{ row.method }}
-              {% else %}
-              <span class="pill bad">Unreadable</span>
-              {% endif %}
-            </div>
+        <li class="result">
+          {% if row.status == "repaired" %}
+          <img src="{{ url_for('preview', job_id=row.job_id, bucket=row.bucket, filename=row.filename) }}" alt="Repaired {{ row.filename }}">
+          {% else %}
+          <div class="blank">No preview</div>
+          {% endif %}
+          <div class="name">{{ row.filename }}</div>
+          <div class="meta">
+            {% if row.status == "repaired" %}
+            <span class="pill ok">Repaired</span> {{ row.method_label }}
+            {% else %}
+            <span class="pill bad">Unreadable</span>
+            {% endif %}
           </div>
-          <a href="{{ url_for('download', job_id=row.job_id, bucket=row.bucket, filename=row.filename) }}">Download</a>
+          <a class="result-download" href="{{ url_for('download', job_id=row.job_id, bucket=row.bucket, filename=row.filename) }}">Download</a>
         </li>
         {% endfor %}
       </ul>
@@ -180,5 +342,13 @@
     </section>
     {% endif %}
   </main>
+  <script>
+    const input = document.getElementById("images");
+    const chosen = document.getElementById("chosen");
+    input.addEventListener("change", function () {
+      const names = Array.from(input.files || []).map(function (file) { return file.name; });
+      chosen.textContent = names.length ? names.join(", ") : "No files selected yet.";
+    });
+  </script>
 </body>
 </html>
