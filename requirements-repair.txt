@@ -4,3 +4,5 @@
 # If you already install opencv-python, that package works in its place.
 pillow>=10.4.0
 opencv-python-headless>=4.10.0
+flask>=3.0.3
+gunicorn>=22.0.0

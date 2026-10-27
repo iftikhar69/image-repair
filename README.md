@@ -428,4 +428,25 @@ python -m pytest repair_tests
 ```
 
 Put damaged files in `corrupted_images/`. Repaired files land in `repaired_images/`. Files neither decoder could open are copied to `unrepairable_images/`. A bad file does not stop the rest of the batch.
-# image-repair
+
+The same repair runs in the browser:
+
+```bash
+python repair_web.py
+```
+
+Open http://127.0.0.1:8765. On Render, the service listens on `$PORT`.
+
+### Deploy on Render
+
+`render.yaml` and `Procfile` are already set. Build command: `pip install -r requirements.txt`. Start command: `gunicorn repair_web:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120`.
+
+1. Push `main` to <https://github.com/iftikhar69/image-repair>.
+2. In Render, choose **New** then **Blueprint**, and connect that repository.
+3. Render reads `render.yaml`, installs the requirements, and opens a web service named `image-repair`.
+
+Do not run `git init` again in this folder. The repository already has history. `origin` should stay `https://github.com/iftikhar69/image-repair.git`, then:
+
+```bash
+git push -u origin main
+```

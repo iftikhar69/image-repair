@@ -1,0 +1,12 @@
+# Render Blueprint for the image repair web service.
+# Dashboard: New > Blueprint, then choose this GitHub repository.
+services:
+  - type: web
+    name: image-repair
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn repair_web:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"

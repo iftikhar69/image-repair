@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Image repair</title>
+  <style>
+    :root {
+      --ink: #1d1a16;
+      --muted: #5e564c;
+      --line: #e4d9c8;
+      --paper: #f7f1e7;
+      --card: #fffaf3;
+      --copper: #b4532a;
+      --copper-dark: #8c3d1c;
+      --ok: #1d6b45;
+      --ok-bg: #e5f4eb;
+      --bad: #8d2d2d;
+      --bad-bg: #f8e8e4;
+      --warn-bg: #fff1e4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, #f3e2cf 0, transparent 36%),
+        var(--paper);
+      font: 16px/1.5 "Segoe UI", "Helvetica Neue", sans-serif;
+    }
+    main {
+      width: min(42rem, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 2.5rem 0 3rem;
+    }
+    header h1 {
+      margin: 0;
+      font-family: Georgia, "Iowan Old Style", serif;
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+    }
+    header p {
+      margin: 0.75rem 0 0;
+      max-width: 38rem;
+      color: var(--muted);
+    }
+    form, .results, .error {
+      margin-top: 1.5rem;
+      padding: 1.25rem;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 0.92rem;
+      font-weight: 650;
+    }
+    .field { margin-bottom: 1rem; }
+    .hint { margin: 0.3rem 0 0; color: var(--muted); font-size: 0.88rem; }
+    input[type="file"], input[type="number"] {
+      width: 100%;
+      padding: 0.7rem 0.75rem;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+    input[type="number"] { max-width: 8rem; }
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 0.75rem 1.2rem;
+      background: var(--copper);
+      color: white;
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    button:hover { background: var(--copper-dark); }
+    .error {
+      background: var(--warn-bg);
+      border-color: #efd0b4;
+    }
+    .summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      margin: 0 0 1rem;
+      color: var(--muted);
+    }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.4rem 1rem;
+      padding: 0.85rem 0;
+      border-top: 1px solid var(--line);
+    }
+    li:first-child { border-top: 0; padding-top: 0; }
+    .name { font-weight: 650; overflow-wrap: anywhere; }
+    .meta { color: var(--muted); font-size: 0.9rem; }
+    .pill {
+      display: inline-block;
+      margin-right: 0.4rem;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .ok { color: var(--ok); background: var(--ok-bg); }
+    .bad { color: var(--bad); background: var(--bad-bg); }
+    a { color: var(--copper-dark); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Image repair</h1>
+      <p>Upload JPEG, PNG, or BMP files that show broken color, missing scanlines, or a damaged header. Pillow rebuilds each file first. OpenCV tries next. A bad file does not stop the rest.</p>
+    </header>
+
+    {% if error %}
+    <p class="error" role="alert">{{ error }}</p>
+    {% endif %}
+
+    <form action="{{ url_for('repair') }}" method="post" enctype="multipart/form-data">
+      <div class="field">
+        <label for="images">Damaged images</label>
+        <input id="images" name="images" type="file" accept=".jpg,.jpeg,.png,.bmp,image/jpeg,image/png,image/bmp" multiple required>
+        <p class="hint">Up to 32 MB for the whole upload. JPEG, PNG, and BMP only.</p>
+      </div>
+      <div class="field">
+        <label for="reference">Reference JPEG, optional</label>
+        <input id="reference" name="reference" type="file" accept=".jpg,.jpeg,image/jpeg">
+        <p class="hint">A photo from the same camera and the same pixel size. Its header is used only when a file will not open at all.</p>
+      </div>
+      <div class="field">
+        <label for="quality">JPEG quality</label>
+        <input id="quality" name="quality" type="number" min="1" max="100" value="95">
+      </div>
+      <button type="submit">Repair images</button>
+    </form>
+
+    {% if job %}
+    <section class="results" aria-live="polite">
+      <p class="summary">
+        <span>{{ job.success }} repaired</span>
+        <span>{{ job.failed }} unreadable</span>
+        <span>{{ job.elapsed }} s</span>
+      </p>
+      {% if job.rows %}
+      <ul>
+        {% for row in job.rows %}
+        <li>
+          <div>
+            <div class="name">{{ row.filename }}</div>
+            <div class="meta">
+              {% if row.status == "repaired" %}
+              <span class="pill ok">Repaired</span> via {{ row.method }}
+              {% else %}
+              <span class="pill bad">Unreadable</span>
+              {% endif %}
+            </div>
+          </div>
+          <a href="{{ url_for('download', job_id=row.job_id, bucket=row.bucket, filename=row.filename) }}">Download</a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+    {% endif %}
+  </main>
+</body>
+</html>
