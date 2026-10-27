@@ -413,3 +413,18 @@ Screenshots of the incorrect screen and the corrected screen, a short screen rec
 | GitHub Actions did not start on a fork | Open the fork's **Actions** tab and enable workflows. The instructor may also need to approve the first run from your account. |
 | Git says `LF will be replaced by CRLF` | Harmless on Windows. `.gitattributes` keeps line endings consistent. |
 | Playwright says the path is too long (Windows) | Move the project to a short path such as `C:\src\<REPO-NAME>` and install again |
+
+---
+
+## Batch image repair
+
+`batch_repair.py` rebuilds damaged JPEG, PNG, and BMP files. Pillow re-encodes truncated scans first. If that fails, OpenCV decodes whatever macroblocks it can. JPEG files that still will not open get container cleanup, and `--reference` can replace a broken header (`FF D8` through `FF DA`) with the header from a photo taken on the same camera at the same size.
+
+```bash
+python -m pip install -r requirements-repair.txt
+python batch_repair.py --help
+python batch_repair.py --workers 4 --reference camera_sample.jpg
+python -m pytest repair_tests
+```
+
+Put damaged files in `corrupted_images/`. Repaired files land in `repaired_images/`. Files neither decoder could open are copied to `unrepairable_images/`. A bad file does not stop the rest of the batch.

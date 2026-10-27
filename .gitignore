@@ -14,3 +14,8 @@ playwright-report/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Working folders created by batch_repair.py
+corrupted_images/
+repaired_images/
+unrepairable_images/
