@@ -48,7 +48,7 @@ You do not need your own damaged photos to try the tool. After you clone, the fi
 
 | File | What is wrong |
 | --- | --- |
-| `samples/truncated.jpg` | The scan ends early |
+| `samples/truncated.jpg` | The scan ends early, leaving a gray gap that repair fills in |
 | `samples/dirty-container.jpg` | Extra bytes before and after the JPEG |
 | `samples/broken-header.jpg` | The header was removed |
 | `samples/reference.jpg` | A clean JPEG of the same scene, used to rebuild that header |

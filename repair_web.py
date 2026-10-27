@@ -33,7 +33,7 @@ SAMPLE_CATALOG = (
     {
         "filename": "truncated.jpg",
         "title": "Truncated JPEG",
-        "detail": "The scan stops early. The top of the scene should still come back.",
+        "detail": "The scan stops early and the lower area is flat gray. Repair fills that gap from the picture above it.",
         "damaged": True,
         "preview": False,
     },
@@ -83,6 +83,7 @@ SAMPLE_CATALOG = (
 _SAMPLE_NAMES = {item["filename"] for item in SAMPLE_CATALOG}
 _METHOD_LABELS = {
     "pillow": "Pillow",
+    "pillow-scanlines": "Pillow, missing scanlines filled",
     "opencv": "OpenCV",
     "pillow-markers": "Pillow, after marker cleanup",
     "opencv-markers": "OpenCV, after marker cleanup",

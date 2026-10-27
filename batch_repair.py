@@ -4,8 +4,9 @@
 Layers, in order:
 
 1. Pillow truncated-scanline recovery. ``ImageFile.LOAD_TRUNCATED_IMAGES``
-   lets Pillow keep readable MCU blocks. The image is re-encoded into a
-   clean file (JPEG quality 95 by default). PNG alpha is preserved.
+   lets Pillow keep readable MCU blocks. Neutral gray left where the scan
+   was cut off is filled from the surrounding picture, then the image is
+   re-encoded (JPEG quality 95 by default). PNG alpha is preserved.
 2. OpenCV matrix recovery. ``cv2.imdecode`` reads whatever macroblocks the
    hardware decoder can salvage, then writes a fresh stream.
 3. JPEG container repair, only after both decoders refuse the original
@@ -332,6 +333,60 @@ def _png_working(img: Image.Image) -> Image.Image:
     return img.convert("RGB")
 
 
+def _missing_scan_mask(rgb: np.ndarray) -> np.ndarray | None:
+    """Return a mask of the gray block Pillow leaves when a JPEG scan is cut off.
+
+    Missing MCU blocks are exactly (128, 128, 128) and run to the bottom of
+    the frame. A real gray object that does not connect to that bottom edge
+    is left alone.
+    """
+
+    if rgb.ndim != 3 or rgb.shape[2] != 3:
+        return None
+    exact = np.all(rgb == 128, axis=2)
+    height, width = exact.shape
+    if height < 8 or width < 8 or float(exact.mean()) < 0.08:
+        return None
+    if float((~exact).mean()) < 0.05:
+        return None
+    if not bool(exact[-1].any()):
+        return None
+
+    components = np.zeros((height, width), dtype=np.uint8)
+    components[exact] = 255
+    count, labels = cv2.connectedComponents(components, connectivity=4)
+    if count < 2:
+        return None
+    bottom_labels = {int(value) for value in labels[-1] if int(value) != 0}
+    if not bottom_labels:
+        return None
+    keep = np.isin(labels, list(bottom_labels))
+    if float(keep.mean()) < 0.08:
+        return None
+    mask = np.zeros((height, width), dtype=np.uint8)
+    mask[keep] = 255
+    return mask
+
+
+def _repair_missing_scanlines(img: Image.Image) -> Image.Image | None:
+    """Fill the gray gap left by a truncated JPEG. Returns None if there is none."""
+
+    rgb = img.convert("RGB")
+    owns_rgb = rgb is not img
+    try:
+        array = np.array(rgb)
+        mask = _missing_scan_mask(array)
+        if mask is None:
+            return None
+        bgr = cv2.cvtColor(array, cv2.COLOR_RGB2BGR)
+        filled = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
+        restored = cv2.cvtColor(filled, cv2.COLOR_BGR2RGB)
+        return Image.fromarray(restored, "RGB")
+    finally:
+        if owns_rgb:
+            rgb.close()
+
+
 def _encode_pillow(
     img: Image.Image,
     ext: str,
@@ -370,20 +425,30 @@ def _encode_pillow(
         out.close()
 
 
-def _encode_loaded(img: Image.Image, ext: str, quality: int) -> bytes | None:
-    optimize_attempts = (True, False) if ext in JPEG_EXTENSIONS or ext == ".png" else (False,)
-    for optimize in optimize_attempts:
-        try:
-            payload = _encode_pillow(img, ext, quality, optimize)
-        except Exception as exc:
-            logger.debug("Pillow encode failed (optimize=%s): %s", optimize, exc)
-            continue
-        if payload and _valid_image_bytes(payload):
-            return payload
-    return None
+def _encode_loaded(img: Image.Image, ext: str, quality: int) -> tuple[bytes, bool] | None:
+    source = img
+    restored: Image.Image | None = None
+    if ext in JPEG_EXTENSIONS:
+        restored = _repair_missing_scanlines(img)
+        if restored is not None:
+            source = restored
+    try:
+        optimize_attempts = (True, False) if ext in JPEG_EXTENSIONS or ext == ".png" else (False,)
+        for optimize in optimize_attempts:
+            try:
+                payload = _encode_pillow(source, ext, quality, optimize)
+            except Exception as exc:
+                logger.debug("Pillow encode failed (optimize=%s): %s", optimize, exc)
+                continue
+            if payload and _valid_image_bytes(payload):
+                return payload, restored is not None
+        return None
+    finally:
+        if restored is not None:
+            restored.close()
 
 
-def _pillow_from_path(path: str, ext: str, quality: int) -> bytes | None:
+def _pillow_from_path(path: str, ext: str, quality: int) -> tuple[bytes, bool] | None:
     try:
         with Image.open(path) as img:
             img.load()
@@ -393,7 +458,7 @@ def _pillow_from_path(path: str, ext: str, quality: int) -> bytes | None:
         return None
 
 
-def _pillow_from_bytes(data: bytes, ext: str, quality: int) -> bytes | None:
+def _pillow_from_bytes(data: bytes, ext: str, quality: int) -> tuple[bytes, bool] | None:
     bio = BytesIO(data)
     try:
         with Image.open(bio) as img:
@@ -465,9 +530,10 @@ def _opencv_from_bytes(data: bytes, ext: str, quality: int) -> bytes | None:
 
 
 def _decode_both(data: bytes, ext: str, quality: int) -> tuple[bytes, str] | None:
-    payload = _pillow_from_bytes(data, ext, quality)
-    if payload:
-        return payload, "pillow"
+    restored = _pillow_from_bytes(data, ext, quality)
+    if restored:
+        payload, filled = restored
+        return payload, "pillow-scanlines" if filled else "pillow"
     payload = _opencv_from_bytes(data, ext, quality)
     if payload:
         return payload, "opencv"
@@ -678,9 +744,10 @@ def _recover(
     quality: int,
     reference: bytes | None,
 ) -> tuple[bytes, str] | None:
-    payload = _pillow_from_path(path, ext, quality)
-    if payload:
-        return payload, "pillow"
+    restored = _pillow_from_path(path, ext, quality)
+    if restored:
+        payload, filled = restored
+        return payload, "pillow-scanlines" if filled else "pillow"
 
     data = _read_bytes(path)
     if data is None:

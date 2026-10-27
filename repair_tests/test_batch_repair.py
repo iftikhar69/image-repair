@@ -102,12 +102,30 @@ def test_pillow_repairs_truncated_jpeg_and_keeps_color(tmp_path):
     assert summary.status == "ok"
     assert summary.success == 1
     assert summary.failed == 0
-    assert summary.results[0].method == "pillow"
+    assert summary.results[0].method in {"pillow", "pillow-scanlines"}
     with Image.open(repaired / "cut.jpg") as repaired_image:
         repaired_image.load()
         assert repaired_image.size == (96, 96)
         actual = repaired_image.getpixel((4, 4))
         assert all(abs(left - right) <= 20 for left, right in zip(actual, expected))
+
+
+def test_truncated_sample_fills_the_gray_gap(tmp_path):
+    source, repaired, failed = _dirs(tmp_path)
+    original = (Path(__file__).resolve().parents[1] / "samples" / "truncated.jpg").read_bytes()
+    (source / "truncated.jpg").write_bytes(original)
+
+    summary = _run(source, repaired, failed)
+
+    assert summary.success == 1
+    assert summary.results[0].method == "pillow-scanlines"
+    with Image.open(repaired / "truncated.jpg") as image:
+        image.load()
+        assert image.size == (160, 100)
+        assert image.getpixel((8, 4))[0] > 180
+        bottom = image.getpixel((80, 90))
+        assert bottom != (128, 128, 128)
+        assert bottom[2] > bottom[0]
 
 
 def test_png_alpha_and_bmp_round_trip(tmp_path):
