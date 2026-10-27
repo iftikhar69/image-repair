@@ -85,15 +85,17 @@ def _strip_to_sos(data: bytes) -> bytes:
 
 def test_pillow_repairs_truncated_jpeg_and_keeps_color(tmp_path):
     source, repaired, failed = _dirs(tmp_path)
-    image = Image.new("RGB", (80, 80), (10, 20, 180))
-    for y in range(16):
-        for x in range(80):
-            image.putpixel((x, y), (220, 10, 10))
-    buffer = io.BytesIO()
-    image.save(buffer, format="JPEG", quality=90)
-    image.close()
-    original = buffer.getvalue()
-    (source / "cut.jpg").write_bytes(original[: int(len(original) * 0.8)])
+    original = _jpeg_bytes(size=(96, 96), noise=True, quality=95)
+    layout = _inspect_jpeg(original)
+    assert layout is not None
+    scan_length = len(original) - layout.entropy_start
+    # Drop the tail of the entropy scan and keep the header intact.
+    (source / "cut.jpg").write_bytes(
+        original[: layout.entropy_start + max(64, scan_length // 4)]
+    )
+    with Image.open(io.BytesIO(original)) as intact:
+        intact.load()
+        expected = intact.getpixel((4, 4))
 
     summary = _run(source, repaired, failed)
 
@@ -103,11 +105,9 @@ def test_pillow_repairs_truncated_jpeg_and_keeps_color(tmp_path):
     assert summary.results[0].method == "pillow"
     with Image.open(repaired / "cut.jpg") as repaired_image:
         repaired_image.load()
-        assert repaired_image.size == (80, 80)
-        red, green, blue = repaired_image.getpixel((4, 4))
-        assert red > 150
-        assert red > green
-        assert red > blue
+        assert repaired_image.size == (96, 96)
+        actual = repaired_image.getpixel((4, 4))
+        assert all(abs(left - right) <= 20 for left, right in zip(actual, expected))
 
 
 def test_png_alpha_and_bmp_round_trip(tmp_path):
@@ -207,6 +207,36 @@ def test_normalize_jpeg_container_keeps_real_markers():
     segment = b"\xff\xfe" + (2 + len(comment)).to_bytes(2, "big") + comment
     stuffed = good[:2] + segment + good[2:]
     assert normalize_jpeg_container(b"LEAD" + stuffed + b"TRAIL") == stuffed
+
+
+def test_leading_and_trailing_junk_uses_marker_cleanup(tmp_path):
+    source, repaired, failed = _dirs(tmp_path)
+    good = _jpeg_bytes(size=(48, 32), noise=True)
+    (source / "dirty.jpg").write_bytes(b"GARBAGE" + good + b"TRAILER")
+
+    summary = _run(source, repaired, failed)
+
+    assert summary.success == 1
+    assert summary.results[0].method == "pillow-markers"
+    with Image.open(repaired / "dirty.jpg") as image:
+        image.load()
+        assert image.size == (48, 32)
+
+
+def test_opencv_fallback_when_pillow_cannot_decode(tmp_path, monkeypatch):
+    monkeypatch.setattr("batch_repair._pillow_from_path", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("batch_repair._pillow_from_bytes", lambda *_args, **_kwargs: None)
+    source, repaired, failed = _dirs(tmp_path)
+    (source / "shot.jpg").write_bytes(_jpeg_bytes(size=(48, 32), noise=True))
+
+    summary = _run(source, repaired, failed)
+
+    assert summary.success == 1
+    assert summary.failed == 0
+    assert summary.results[0].method == "opencv"
+    with Image.open(repaired / "shot.jpg") as image:
+        image.load()
+        assert image.size == (48, 32)
 
 
 def test_uppercase_jpeg_extension_is_kept(tmp_path):

@@ -145,6 +145,23 @@ def configure_logging(verbose: bool = False, log_path: str | None = None) -> Non
         logger.addHandler(file_handler)
 
 
+def _int_in_range(name: str, low: int, high: int):
+    """Argparse type that rejects values outside a closed integer range."""
+
+    def parse(value: str) -> int:
+        try:
+            number = int(value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(f"{name} must be an integer") from exc
+        if number < low or number > high:
+            raise argparse.ArgumentTypeError(
+                f"{name} must be between {low} and {high}"
+            )
+        return number
+
+    return parse
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="batch_repair.py",
@@ -187,14 +204,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--workers",
         "-w",
-        type=int,
+        type=_int_in_range("workers", 1, MAX_WORKERS),
         default=1,
         help=f"Parallel files to repair (1-{MAX_WORKERS}, default: 1)",
     )
     parser.add_argument(
         "--quality",
         "-q",
-        type=int,
+        type=_int_in_range("quality", 1, 100),
         default=95,
         help="JPEG quality tag written by both decoders (1-100, default: 95)",
     )
